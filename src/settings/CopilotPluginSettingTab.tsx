@@ -374,6 +374,16 @@ class CopilotPluginSettingTab extends PluginSettingTab {
 				command: "npx",
 				args: ["-y", "@upstash/context7-mcp@latest"],
 				description: "Upstash Context7 MCP 服务器",
+				type: "stdio",
+			},
+			{
+				id: "deepwiki-sse",
+				name: "Deepwiki SSE",
+				command: "",
+				args: [],
+				description: "Deepwiki SSE MCP 服务器",
+				type: "http",
+				url: "https://mcp.deepwiki.com/sse",
 			},
 			// 可继续添加其他预设
 		];
