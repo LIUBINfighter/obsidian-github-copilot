@@ -96,8 +96,8 @@ const FileSuggestion: React.FC<FileSuggestionProps> = ({
 			className={concat(BASE_CLASSNAME, "container")}
 			style={{
 				position: "absolute",
-				top: `-200px`,
-				left: `10px`,
+				top: `${position.top}px`,
+				left: `${position.left}px`,
 				width: "calc(100% - 20px)",
 				maxHeight: "200px",
 				overflowY: "auto",

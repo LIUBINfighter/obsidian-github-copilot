@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent, useRef, useEffect } from "react";
+import React, { useState, KeyboardEvent, useRef, useEffect, useCallback } from "react";
 import { concat, cx } from "../../../utils/style";
 import { useCopilotStore } from "../../store/store";
 import { usePlugin } from "../../hooks/usePlugin";
@@ -28,19 +28,38 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 	});
 	const [showFileSuggestion, setShowFileSuggestion] = useState(false);
 	const [fileSearchQuery, setFileSearchQuery] = useState("");
-	const [dropdownPosition] = useState({
+	const [dropdownPosition, setDropdownPosition] = useState({
 		top: 0,
 		left: 0,
 	});
 
-	const updateCursorPosition = () => {
+	// 获取配置文件相关信息
+	const activeProfile = plugin?.profileManager.getActiveProfile();
+	const profiles = plugin?.settings.profiles || {};
+	const activeProfileName = plugin?.settings.activeProfileName || "default";
+
+	// 处理配置文件切换
+	const handleProfileChange = async (profileName: string) => {
+		if (!plugin) return;
+		await plugin.profileManager.switchProfile(profileName);
+		plugin.handleProfileSwitch();
+	};
+
+	const updateCursorPosition = useCallback(() => {
 		if (!textareaRef.current) return;
 
-		setCursorPosition({
-			start: textareaRef.current.selectionStart,
-			end: textareaRef.current.selectionEnd,
+		const cursorPosition = textareaRef.current.selectionStart;
+		const textBeforeCursor = textareaRef.current.value.substring(0, cursorPosition);
+		const lineCount = (textBeforeCursor.match(/\n/g) || []).length;
+
+		const { offsetLeft, offsetTop } = textareaRef.current;
+		const lineHeight = parseInt(getComputedStyle(textareaRef.current).lineHeight);
+		
+		setDropdownPosition({
+			left: offsetLeft,
+			top: offsetTop + (lineCount * lineHeight),
 		});
-	};
+	}, []);
 
 	const checkForFileLinkPattern = (value: string, cursorPos: number) => {
 		const textBeforeCursor = value.substring(0, cursorPos);
@@ -181,28 +200,28 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 		}
 	};
 
-const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-  if (!plugin) return;
+	const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+		if (!plugin) return;
 
-  const activeProfile = plugin.profileManager.getActiveProfile();
-  const invertBehavior = activeProfile.invertEnterSendBehavior;
+		const activeProfile = plugin.profileManager.getActiveProfile();
+		const invertBehavior = activeProfile.invertEnterSendBehavior;
 
-  if (e.key === "Enter" && !showFileSuggestion) {
-	if (invertBehavior) {
-	  if (e.shiftKey) {
-		e.preventDefault();
-		handleSubmit();
-	  }
-	} else {
-	  if (!e.shiftKey) {
-		e.preventDefault();
-		handleSubmit();
-	  }
-	}
-  }
+		if (e.key === "Enter" && !showFileSuggestion) {
+			if (invertBehavior) {
+				if (e.shiftKey) {
+					e.preventDefault();
+					handleSubmit();
+				}
+			} else {
+				if (!e.shiftKey) {
+					e.preventDefault();
+					handleSubmit();
+				}
+			}
+		}
 
-  updateCursorPosition();
-};
+		updateCursorPosition();
+	};
 
 	useEffect(() => {
 		if (textareaRef.current) {
@@ -228,39 +247,57 @@ const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
 	}, []);
 
 	return (
-		<div className={concat(BASE_CLASSNAME, "container")}>
-			<ModelSelector isAuthenticated={isAuthenticated} />
-			<div className={concat(BASE_CLASSNAME, "input-container")}>
-				<textarea
-					ref={textareaRef}
-					className={cx(
-						"setting-item-input",
-						concat(BASE_CLASSNAME, "input"),
-					)}
-					value={message}
-					onChange={handleMessageChange}
-					onKeyDown={handleKeyDown}
-					placeholder="Ask GitHub Copilot something... Use [[]] to link notes"
-					disabled={isLoading || !isAuthenticated}
-				/>
-				{showFileSuggestion && (
-					<FileSuggestion
-						query={fileSearchQuery}
-						position={dropdownPosition}
-						onSelect={handleFileSelect}
-						onClose={() => setShowFileSuggestion(false)}
-						plugin={plugin}
+		<div className={concat(BASE_CLASSNAME, "wrapper")}>
+			<div className={concat(BASE_CLASSNAME, "container")}>
+				<div className={concat(BASE_CLASSNAME, "input-container")}>
+					<textarea
+						ref={textareaRef}
+						className={cx(
+							"setting-item-input",
+							concat(BASE_CLASSNAME, "input"),
+						)}
+						value={message}
+						onChange={handleMessageChange}
+						onKeyDown={handleKeyDown}
+						placeholder="Ask GitHub Copilot something... Use [[]] to link notes"
+						disabled={isLoading || !isAuthenticated}
 					/>
-				)}
-				<button
-					className={cx("mod-cta", concat(BASE_CLASSNAME, "button"))}
-					onClick={handleSubmit}
-					disabled={
-						isLoading || message.trim() === "" || !isAuthenticated
-					}
-				>
-					{isLoading ? "Thinking..." : "Send"}
-				</button>
+					{showFileSuggestion && (
+						<FileSuggestion
+							query={fileSearchQuery}
+							position={dropdownPosition}
+							onSelect={handleFileSelect}
+							onClose={() => setShowFileSuggestion(false)}
+							plugin={plugin}
+						/>
+					)}
+				</div>
+				<div className={concat(BASE_CLASSNAME, "bottom-controls")}>
+					<div className={concat(BASE_CLASSNAME, "left-controls")}>
+						<select
+							className={concat(BASE_CLASSNAME, "profile-selector")}
+							value={activeProfileName}
+							onChange={(e) => handleProfileChange(e.target.value)}
+							disabled={isLoading || !isAuthenticated}
+						>
+							{Object.keys(profiles).map((profileName) => (
+								<option key={profileName} value={profileName}>
+									{profileName}
+								</option>
+							))}
+						</select>
+						<ModelSelector isAuthenticated={isAuthenticated} />
+					</div>
+					<button
+						className={cx("mod-cta", concat(BASE_CLASSNAME, "button"))}
+						onClick={handleSubmit}
+						disabled={
+							isLoading || message.trim() === "" || !isAuthenticated
+						}
+					>
+						{isLoading ? "Thinking..." : "Send"}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
