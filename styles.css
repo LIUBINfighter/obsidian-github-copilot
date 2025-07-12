@@ -863,6 +863,38 @@
 	background-color: var(--background-secondary);
 }
 
+/* MCP 服务器卡片样式 */
+.copilot-server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.copilot-server-item {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 12px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  background: var(--background-primary);
+}
+
+.copilot-server-item:hover {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.copilot-server-type {
+  margin-top: 8px;
+  border-top: 1px dashed var(--background-modifier-border);
+  padding-top: 8px;
+}
+
+.copilot-server-type-text {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
 .copilot-server-args {
   margin-top: 4px;
   padding-left: 16px;

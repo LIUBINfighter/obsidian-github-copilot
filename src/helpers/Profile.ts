@@ -2,14 +2,36 @@ import { Notice } from "obsidian";
 import CopilotPlugin from "../main";
 import { defaultModels } from "../copilot-chat/store/slices/message";
 
-export interface McpServerConfig {
+// STDIO连接类型
+export interface IStdioMcpServerConfig {
 	id: string;
 	name: string;
-	scriptPath: string;
-	startCommand?: string;
+	type: "stdio";
+	version?: string;
+	command: string;
 	args?: string[];
+	cwd?: string;
+	env?: { [key: string]: string };
+	scriptPath?: string;
+	filePath?: string;
 	description?: string;
 }
+
+// SSE连接类型
+export interface ISSEMcpServerConfig {
+	id: string;
+	name: string;
+	type: "sse";
+	version?: string;
+	url: string;
+	oauth?: string;
+	env?: { [key: string]: string };
+	filePath?: string;
+	description?: string;
+}
+
+// 支持两种类型的MCP服务器
+export type McpServerConfig = IStdioMcpServerConfig | ISSEMcpServerConfig;
 
 export interface ProfileSettings {
 	name: string;
@@ -170,10 +192,38 @@ export class ProfileManager {
 			return;
 		}
 		
-		mcpServerRegistry[serverIndex] = {
-			...mcpServerRegistry[serverIndex],
-			...updates,
-		};
+		const updatedType = updates.type ?? mcpServerRegistry[serverIndex].type;
+		if (updatedType === "stdio") {
+			const updatesStdio = updates as Partial<IStdioMcpServerConfig>;
+			const prev = mcpServerRegistry[serverIndex] as IStdioMcpServerConfig;
+			mcpServerRegistry[serverIndex] = {
+				id: updatesStdio.id ?? prev.id,
+				name: updatesStdio.name ?? prev.name,
+				type: "stdio",
+				version: updatesStdio.version ?? prev.version,
+				command: updatesStdio.command ?? prev.command,
+				args: updatesStdio.args ?? prev.args,
+				cwd: updatesStdio.cwd ?? prev.cwd,
+				env: updatesStdio.env ?? prev.env,
+				scriptPath: updatesStdio.scriptPath ?? prev.scriptPath,
+				filePath: updatesStdio.filePath ?? prev.filePath,
+				description: updatesStdio.description ?? prev.description,
+			};
+		} else if (updatedType === "sse") {
+			const updatesSse = updates as Partial<ISSEMcpServerConfig>;
+			const prev = mcpServerRegistry[serverIndex] as ISSEMcpServerConfig;
+			mcpServerRegistry[serverIndex] = {
+				id: updatesSse.id ?? prev.id,
+				name: updatesSse.name ?? prev.name,
+				type: "sse",
+				version: updatesSse.version ?? prev.version,
+				url: updatesSse.url ?? prev.url,
+				oauth: updatesSse.oauth ?? prev.oauth,
+				env: updatesSse.env ?? prev.env,
+				filePath: updatesSse.filePath ?? prev.filePath,
+				description: updatesSse.description ?? prev.description,
+			};
+		}
 		
 		await this.plugin.saveData(this.plugin.settings);
 		new Notice(`已更新 MCP 服务器: ${mcpServerRegistry[serverIndex].name}`);
