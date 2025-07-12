@@ -6,20 +6,21 @@ import CopilotPlugin from "../../main";
 import Chat from "../components/Chat";
 import { addIcon } from "obsidian";
 import { copilotIcon } from "../../assets/copilot";
+import { useCopilotStore } from "../store/store";
 
 export const PluginContext = React.createContext<CopilotPlugin | undefined>(
 	undefined,
 );
 
 export default class ChatView extends ItemView {
-	private root: Root | null = null;
-	private plugin: CopilotPlugin;
+  private root: Root | null = null;
+  public plugin: CopilotPlugin;
 
-	constructor(leaf: WorkspaceLeaf, plugin: CopilotPlugin) {
-		super(leaf);
-		this.app = plugin.app;
-		this.plugin = plugin;
-	}
+  constructor(leaf: WorkspaceLeaf, plugin: CopilotPlugin) {
+	super(leaf);
+	this.app = plugin.app;
+	this.plugin = plugin;
+  }
 
 	getViewType(): string {
 		return CHAT_VIEW_TYPE;
@@ -40,9 +41,11 @@ export default class ChatView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		const root = createRoot(this.containerEl.children[1]);
+		if (!this.root) {
+			this.root = createRoot(this.containerEl.children[1]);
+		}
 
-		root.render(
+		this.root.render(
 			<PluginContext.Provider value={this.plugin}>
 				<React.StrictMode>
 					<Chat />
@@ -54,10 +57,17 @@ export default class ChatView extends ItemView {
 	async onClose(): Promise<void> {
 		if (this.root) {
 			this.root.unmount();
+			this.root = null;
 		}
 	}
 
 	updateView(): void {
 		this.onOpen();
+	}
+
+	// 配置文件切换后同步聊天设置
+	public updateForProfileSwitch(): void {
+		// 只调用 zustand store 的 applyProfileSettings，不需要重新渲染整个视图
+		useCopilotStore.getState().applyProfileSettings(this.plugin);
 	}
 }

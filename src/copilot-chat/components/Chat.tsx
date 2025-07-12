@@ -9,6 +9,8 @@ import { copilotIcon } from "../../assets/copilot";
 import { userIcon } from "../../assets/user";
 import { useCopilotStore } from "../store/store";
 import { usePlugin } from "../hooks/usePlugin";
+import { MessageData } from "../store/slices/message";
+import { Conversation } from "../store/slices/conversation";
 
 const Chat: React.FC = () => {
 	const plugin = usePlugin();
@@ -27,12 +29,12 @@ const Chat: React.FC = () => {
 	}, [plugin, initConversationService]);
 
 	const displayMessages = activeConversationId
-		? conversations.find((conv) => conv.id === activeConversationId)
+		? conversations.find((conv: Conversation) => conv.id === activeConversationId)
 				?.messages || []
 		: messages;
 
 	const formattedMessages: MessageProps[] = displayMessages.map(
-		(message) => ({
+		(message: MessageData) => ({
 			icon: message.role === "assistant" ? copilotIcon : userIcon,
 			name: message.role === "assistant" ? "GitHub Copilot" : "User",
 			message: message.content,

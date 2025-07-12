@@ -39,6 +39,7 @@ export interface MessageSlice {
 		plugin: CopilotPlugin | undefined,
 		model: ModelOption,
 	) => void;
+	applyProfileSettings: (plugin: CopilotPlugin) => void;
 }
 
 export const defaultModels: ModelOption[] = [
@@ -68,10 +69,10 @@ export const createMessageSlice: StateCreator<
 	availableModels: defaultModels,
 
 	initMessageService: (plugin: CopilotPlugin | undefined) => {
-		if (plugin && plugin.settings.chatSettings) {
-			const { selectedModel } = plugin.settings.chatSettings;
-			if (selectedModel) {
-				set({ selectedModel });
+		if (plugin && plugin.profileManager) {
+			const activeProfile = plugin.profileManager.getActiveProfile();
+			if (activeProfile && activeProfile.selectedModel) {
+				set({ selectedModel: activeProfile.selectedModel });
 			}
 		}
 	},
@@ -134,7 +135,12 @@ export const createMessageSlice: StateCreator<
 						role: msg.role,
 					}));
 
-			const systemPrompt = plugin?.settings.systemPrompt;
+			// 获取当前活动配置文件的 systemPrompt
+			let systemPrompt = "";
+			if (plugin && plugin.profileManager) {
+				const activeProfile = plugin.profileManager.getActiveProfile();
+				systemPrompt = activeProfile?.systemPrompt || "";
+			}
 			const messages = systemPrompt
 				? [{ content: systemPrompt, role: "system" }, ...messageHistory]
 				: messageHistory;
@@ -223,23 +229,21 @@ export const createMessageSlice: StateCreator<
 			selectedModel: model,
 		});
 
-		if (plugin) {
-			if (!plugin.settings.chatSettings) {
-				plugin.settings.chatSettings = {
-					deviceCode: null,
-					pat: null,
-					accessToken: {
-						token: null,
-						expiresAt: null,
-					},
-					selectedModel: model,
-				};
-			} else {
-				plugin.settings.chatSettings.selectedModel = model;
-			}
+		if (plugin && plugin.profileManager) {
+			plugin.profileManager
+				.updateActiveProfile({ selectedModel: model })
+				.catch((error: any) => {
+					console.error("Failed to save selected model:", error);
+				});
+		}
+	},
 
-			plugin.saveData(plugin.settings).catch((error) => {
-				console.error("Failed to save selected model:", error);
+	// 新增：用于配置文件切换后同步聊天设置
+	applyProfileSettings: (plugin: CopilotPlugin) => {
+		if (plugin && plugin.profileManager) {
+			const activeProfile = plugin.profileManager.getActiveProfile();
+			set({
+				selectedModel: activeProfile.selectedModel,
 			});
 		}
 	},

@@ -1,7 +1,7 @@
 import { StateCreator } from "zustand";
 import { Notice } from "obsidian";
 import CopilotPlugin from "../../../main";
-import { CopilotChatSettings } from "../../../settings/CopilotPluginSettingTab";
+import { AuthSettings } from "../../../helpers/Profile";
 import {
 	fetchDeviceCode,
 	fetchPAT,
@@ -12,9 +12,9 @@ import {
 } from "../../api";
 
 export interface AuthSlice {
-	deviceCode: CopilotChatSettings["deviceCode"];
-	pat: CopilotChatSettings["pat"];
-	accessToken: CopilotChatSettings["accessToken"];
+	deviceCode: AuthSettings["deviceCode"];
+	pat: AuthSettings["pat"];
+	accessToken: AuthSettings["accessToken"];
 	isAuthenticated: boolean;
 	isLoadingDeviceCode: boolean;
 	isLoadingPAT: boolean;
@@ -28,7 +28,7 @@ export interface AuthSlice {
 	setPAT: (plugin: CopilotPlugin, pat: string) => void;
 	setAccessToken: (
 		plugin: CopilotPlugin,
-		token: CopilotChatSettings["accessToken"],
+		token: AuthSettings["accessToken"],
 	) => void;
 
 	fetchDeviceCode: (
@@ -46,7 +46,7 @@ export interface AuthSlice {
 	reset: (plugin: CopilotPlugin) => void;
 }
 
-const defaultChatSettings: CopilotChatSettings = {
+const defaultAuthSettings = {
 	deviceCode: null,
 	pat: null,
 	accessToken: {
@@ -73,35 +73,35 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
 	deviceCodeData: null,
 
 	initAuthService: async (plugin: CopilotPlugin) => {
-		const chatSettings =
-			plugin.settings.chatSettings || defaultChatSettings;
+		const authSettings =
+			plugin.settings.authSettings || defaultAuthSettings;
 
 		set({
-			deviceCode: chatSettings.deviceCode,
-			pat: chatSettings.pat,
-			accessToken: chatSettings.accessToken || {
+			deviceCode: authSettings.deviceCode,
+			pat: authSettings.pat,
+			accessToken: authSettings.accessToken || {
 				token: null,
 				expiresAt: 0,
 			},
 		});
 
 		if (
-			chatSettings.pat &&
-			(!chatSettings.accessToken?.token ||
-				isTokenExpired(chatSettings.accessToken?.expiresAt || 0))
+			authSettings.pat &&
+			(!authSettings.accessToken?.token ||
+				isTokenExpired(authSettings.accessToken?.expiresAt || 0))
 		) {
 			try {
-				await get().fetchToken(plugin, chatSettings.pat);
+				await get().fetchToken(plugin, authSettings.pat);
 			} catch (error) {
 				console.error("Failed to refresh token during init:", error);
 			}
 		} else {
 			set({
 				isAuthenticated: !!(
-					chatSettings.deviceCode &&
-					chatSettings.pat &&
-					chatSettings.accessToken?.token &&
-					!isTokenExpired(chatSettings.accessToken?.expiresAt || 0)
+					authSettings.deviceCode &&
+					authSettings.pat &&
+					authSettings.accessToken?.token &&
+					!isTokenExpired(authSettings.accessToken?.expiresAt || 0)
 				),
 			});
 		}
@@ -134,11 +134,11 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
 		if (plugin) {
 			console.log("setDeviceCode", code);
 
-			if (!plugin.settings.chatSettings) {
-				plugin.settings.chatSettings = { ...defaultChatSettings };
+			if (!plugin.settings.authSettings) {
+				plugin.settings.authSettings = { ...defaultAuthSettings };
 			}
 
-			plugin.settings.chatSettings.deviceCode = code;
+			plugin.settings.authSettings.deviceCode = code;
 			await plugin.saveData(plugin.settings);
 		}
 		set({ deviceCode: code });
@@ -148,11 +148,15 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
 		if (plugin) {
 			console.log("setPAT", pat);
 
-			if (!plugin.settings.chatSettings) {
-				plugin.settings.chatSettings = { ...defaultChatSettings };
+			if (!plugin.settings.authSettings) {
+				plugin.settings.authSettings = { ...defaultAuthSettings };
 			}
 
-			plugin.settings.chatSettings.pat = pat;
+			plugin.settings.authSettings.pat = pat;
+			// 保证 deviceCode 也能被正确写入（如有需要）
+			if (plugin.settings.authSettings.deviceCode === undefined) {
+				plugin.settings.authSettings.deviceCode = null;
+			}
 			await plugin.saveData(plugin.settings);
 		}
 		set({ pat: pat });
@@ -160,16 +164,16 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
 
 	setAccessToken: async (
 		plugin: CopilotPlugin,
-		token: CopilotChatSettings["accessToken"],
+		token: AuthSettings["accessToken"],
 	) => {
 		if (plugin) {
 			console.log("setAccessToken", token);
 
-			if (!plugin.settings.chatSettings) {
-				plugin.settings.chatSettings = { ...defaultChatSettings };
+			if (!plugin.settings.authSettings) {
+				plugin.settings.authSettings = { ...defaultAuthSettings };
 			}
 
-			plugin.settings.chatSettings.accessToken = token;
+			plugin.settings.authSettings.accessToken = token;
 			await plugin.saveData(plugin.settings);
 		}
 		set({
@@ -257,12 +261,12 @@ export const createAuthSlice: StateCreator<AuthSlice> = (set, get) => ({
 			deviceCodeData: null,
 		});
 
-		if (!plugin.settings.chatSettings) {
-			plugin.settings.chatSettings = { ...defaultChatSettings };
+		if (!plugin.settings.authSettings) {
+			plugin.settings.authSettings = { ...defaultAuthSettings };
 		} else {
-			plugin.settings.chatSettings.deviceCode = null;
-			plugin.settings.chatSettings.pat = null;
-			plugin.settings.chatSettings.accessToken = {
+			plugin.settings.authSettings.deviceCode = null;
+			plugin.settings.authSettings.pat = null;
+			plugin.settings.authSettings.accessToken = {
 				token: null,
 				expiresAt: 0,
 			};

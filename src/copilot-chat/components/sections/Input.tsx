@@ -181,27 +181,28 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 		}
 	};
 
-	const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-		if (!plugin) return;
+const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  if (!plugin) return;
 
-		const invertBehavior = plugin.settings.invertEnterSendBehavior;
+  const activeProfile = plugin.profileManager.getActiveProfile();
+  const invertBehavior = activeProfile.invertEnterSendBehavior;
 
-		if (e.key === "Enter" && !showFileSuggestion) {
-			if (invertBehavior) {
-				if (e.shiftKey) {
-					e.preventDefault();
-					handleSubmit();
-				}
-			} else {
-				if (!e.shiftKey) {
-					e.preventDefault();
-					handleSubmit();
-				}
-			}
-		}
+  if (e.key === "Enter" && !showFileSuggestion) {
+	if (invertBehavior) {
+	  if (e.shiftKey) {
+		e.preventDefault();
+		handleSubmit();
+	  }
+	} else {
+	  if (!e.shiftKey) {
+		e.preventDefault();
+		handleSubmit();
+	  }
+	}
+  }
 
-		updateCursorPosition();
-	};
+  updateCursorPosition();
+};
 
 	useEffect(() => {
 		if (textareaRef.current) {
