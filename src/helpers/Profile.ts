@@ -2,6 +2,15 @@ import { Notice } from "obsidian";
 import CopilotPlugin from "../main";
 import { defaultModels } from "../copilot-chat/store/slices/message";
 
+export interface McpServerConfig {
+	id: string;
+	name: string;
+	scriptPath: string;
+	startCommand?: string;
+	args?: string[];
+	description?: string;
+}
+
 export interface ProfileSettings {
 	name: string;
 	systemPrompt: string;
@@ -10,6 +19,7 @@ export interface ProfileSettings {
 		label: string;
 		value: string;
 	};
+	enabledMcpServers: string[]; // 存储启用的 MCP 服务器 ID
 }
 
 export interface AuthSettings {
@@ -25,6 +35,7 @@ export interface PluginSettings {
 	authSettings: AuthSettings;
 	profiles: Record<string, ProfileSettings>;
 	activeProfileName: string;
+	mcpServerRegistry: McpServerConfig[]; // MCP 服务器注册表
 }
 
 export const DEFAULT_AUTH_SETTINGS: AuthSettings = {
@@ -42,6 +53,7 @@ export const DEFAULT_PROFILE: ProfileSettings = {
 		"You are GitHub Copilot, an AI assistant. You are helping the user with their tasks in Obsidian.",
 	invertEnterSendBehavior: false,
 	selectedModel: defaultModels[4],
+	enabledMcpServers: [], // 默认不启用任何 MCP 服务器
 };
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -50,6 +62,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
 		default: DEFAULT_PROFILE,
 	},
 	activeProfileName: "default",
+	mcpServerRegistry: [], // 默认空的 MCP 服务器注册表
 };
 
 export class ProfileManager {
@@ -132,6 +145,101 @@ export class ProfileManager {
 		new Notice(`已删除配置文件: ${profileName}`);
 	}
 
+	// 新增: 添加 MCP 服务器到全局注册表
+	async addMcpServer(server: McpServerConfig): Promise<void> {
+		const { mcpServerRegistry } = this.plugin.settings;
+		
+		// 检查 ID 是否已存在
+		if (mcpServerRegistry.some(s => s.id === server.id)) {
+			new Notice(`MCP 服务器 ID "${server.id}" 已存在`);
+			return;
+		}
+		
+		mcpServerRegistry.push(server);
+		await this.plugin.saveData(this.plugin.settings);
+		new Notice(`已添加 MCP 服务器: ${server.name}`);
+	}
+
+	// 新增: 更新 MCP 服务器
+	async updateMcpServer(serverId: string, updates: Partial<McpServerConfig>): Promise<void> {
+		const { mcpServerRegistry } = this.plugin.settings;
+		const serverIndex = mcpServerRegistry.findIndex(s => s.id === serverId);
+		
+		if (serverIndex === -1) {
+			new Notice(`MCP 服务器 ID "${serverId}" 不存在`);
+			return;
+		}
+		
+		mcpServerRegistry[serverIndex] = {
+			...mcpServerRegistry[serverIndex],
+			...updates,
+		};
+		
+		await this.plugin.saveData(this.plugin.settings);
+		new Notice(`已更新 MCP 服务器: ${mcpServerRegistry[serverIndex].name}`);
+	}
+
+	// 新增: 删除 MCP 服务器
+	async deleteMcpServer(serverId: string): Promise<void> {
+		const { mcpServerRegistry, profiles } = this.plugin.settings;
+		const serverIndex = mcpServerRegistry.findIndex(s => s.id === serverId);
+		
+		if (serverIndex === -1) {
+			new Notice(`MCP 服务器 ID "${serverId}" 不存在`);
+			return;
+		}
+		
+		// 从所有 Profile 中移除该服务器的引用
+		Object.values(profiles).forEach(profile => {
+			// 确保 enabledMcpServers 存在，如果不存在则初始化为空数组
+			if (!profile.enabledMcpServers) {
+				profile.enabledMcpServers = [];
+			} else {
+				profile.enabledMcpServers = profile.enabledMcpServers.filter(id => id !== serverId);
+			}
+		});
+		
+		// 从注册表中删除
+		mcpServerRegistry.splice(serverIndex, 1);
+		await this.plugin.saveData(this.plugin.settings);
+		new Notice(`已删除 MCP 服务器`);
+	}
+
+	// 新增: 为当前 Profile 启用/禁用 MCP 服务器
+	async toggleMcpServerForActiveProfile(serverId: string, enabled: boolean): Promise<void> {
+		const activeProfile = this.getActiveProfile();
+		const { mcpServerRegistry } = this.plugin.settings;
+		
+		// 检查服务器是否存在
+		if (!mcpServerRegistry.some(s => s.id === serverId)) {
+			new Notice(`MCP 服务器 ID "${serverId}" 不存在`);
+			return;
+		}
+		
+		// 确保 enabledMcpServers 存在
+		if (!activeProfile.enabledMcpServers) {
+			activeProfile.enabledMcpServers = [];
+		}
+		
+		if (enabled) {
+			// 添加到已启用列表（如果不存在）
+			if (!activeProfile.enabledMcpServers.includes(serverId)) {
+				await this.updateActiveProfile({
+					enabledMcpServers: [...activeProfile.enabledMcpServers, serverId]
+				});
+				new Notice(`已为当前配置文件启用 MCP 服务器`);
+			}
+		} else {
+			// 从已启用列表中移除
+			if (activeProfile.enabledMcpServers.includes(serverId)) {
+				await this.updateActiveProfile({
+					enabledMcpServers: activeProfile.enabledMcpServers.filter(id => id !== serverId)
+				});
+				new Notice(`已为当前配置文件禁用 MCP 服务器`);
+			}
+		}
+	}
+
 	async migrateFromOldSettings(oldSettings: any): Promise<PluginSettings> {
 		const newSettings: PluginSettings = {
 			authSettings: DEFAULT_AUTH_SETTINGS,
@@ -139,6 +247,7 @@ export class ProfileManager {
 				default: DEFAULT_PROFILE,
 			},
 			activeProfileName: "default",
+			mcpServerRegistry: [], // 新增空的 MCP 服务器注册表
 		};
 		if (oldSettings.chatSettings) {
 			newSettings.authSettings = {
@@ -162,6 +271,7 @@ export class ProfileManager {
 			selectedModel:
 				oldSettings.chatSettings?.selectedModel ||
 				DEFAULT_PROFILE.selectedModel,
+			enabledMcpServers: [], // 新增空的已启用 MCP 服务器列表
 		};
 		return newSettings;
 	}

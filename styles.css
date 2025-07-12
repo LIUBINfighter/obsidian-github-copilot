@@ -862,3 +862,14 @@
 .copilot-chat-message table th {
 	background-color: var(--background-secondary);
 }
+
+.copilot-server-args {
+  margin-top: 4px;
+  padding-left: 16px;
+}
+
+.copilot-server-args-text {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+}
