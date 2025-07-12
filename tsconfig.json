@@ -10,7 +10,7 @@
     "moduleResolution": "node",
     "importHelpers": true,
     "isolatedModules": true,
-	  "strictNullChecks": true,
+    "strictNullChecks": true,
     "allowSyntheticDefaultImports": true,
     "lib": [
       "DOM",
@@ -25,6 +25,10 @@
 , "src/settings/CopilotPluginSettingTab.tsx"  ],
   "exclude": [
     "node_modules",
-    "copilot/**/*",
+    "src/copilot",
+    "src/events",
+    "src/extensions",
+    "src/status",
+    "src/modal/AuthModal.ts"
   ]
 }
