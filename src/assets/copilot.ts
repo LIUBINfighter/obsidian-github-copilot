@@ -1,5 +1,5 @@
 export const copilotIcon = `
-<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" class="svg-icon copilot">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M5.64063 7.67017C5.97718 7.67017 6.25 7.94437 6.25 8.28263V9.60963C6.25 9.94786 5.97718 10.2221 5.64063 10.2221C5.30408 10.2221 5.03125 9.94786 5.03125 9.60963V8.28263C5.03125 7.94437 5.30408 7.67017 5.64063 7.67017Z" fill="currentColor"/>
 <path fill-rule="evenodd" clip-rule="evenodd" d="M8.37537 7.67017C8.71192 7.67017 8.98474 7.94437 8.98474 8.28263V9.60963C8.98474 9.94786 8.71192 10.2221 8.37537 10.2221C8.03882 10.2221 7.76599 9.94786 7.76599 9.60963V8.28263C7.76599 7.94437 8.03882 7.67017 8.37537 7.67017Z" fill="currentColor"/>
 <path d="M7 3.65625C7 5.84375 5.10754 6.3718 3.76562 6.3718C2.42371 6.3718 2.1405 5.3854 2.1405 4.16861C2.1405 2.95182 3.22834 1.96542 4.57025 1.96542C5.91216 1.96542 7 2.43946 7 3.65625Z" fill="currentColor" fill-opacity="0.5" stroke="currentColor" stroke-width="1.25"/>

@@ -4,6 +4,8 @@ import { ItemView, WorkspaceLeaf } from "obsidian";
 import { CHAT_VIEW_TYPE } from "../types/constants";
 import CopilotPlugin from "../../main";
 import Chat from "../components/Chat";
+import { addIcon } from "obsidian";
+import { copilotIcon } from "../../assets/copilot";
 
 export const PluginContext = React.createContext<CopilotPlugin | undefined>(
 	undefined,
@@ -24,7 +26,9 @@ export default class ChatView extends ItemView {
 	}
 
 	getIcon(): string {
-		return "bot-message-square";
+		// 注册 copilot 图标并返回图标名，Obsidian 会自动渲染 SVG
+		addIcon("copilot", copilotIcon);
+		return "copilot";
 	}
 
 	getTitle(): string {
