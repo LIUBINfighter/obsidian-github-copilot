@@ -13,14 +13,14 @@ export const PluginContext = React.createContext<CopilotPlugin | undefined>(
 );
 
 export default class ChatView extends ItemView {
-  private root: Root | null = null;
-  public plugin: CopilotPlugin;
+	private root: Root | null = null;
+	public plugin: CopilotPlugin;
 
-  constructor(leaf: WorkspaceLeaf, plugin: CopilotPlugin) {
-	super(leaf);
-	this.app = plugin.app;
-	this.plugin = plugin;
-  }
+	constructor(leaf: WorkspaceLeaf, plugin: CopilotPlugin) {
+		super(leaf);
+		this.app = plugin.app;
+		this.plugin = plugin;
+	}
 
 	getViewType(): string {
 		return CHAT_VIEW_TYPE;

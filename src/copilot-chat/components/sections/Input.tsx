@@ -1,4 +1,10 @@
-import React, { useState, KeyboardEvent, useRef, useEffect, useCallback } from "react";
+import React, {
+	useState,
+	KeyboardEvent,
+	useRef,
+	useEffect,
+	useCallback,
+} from "react";
 import { concat, cx } from "../../../utils/style";
 import { useCopilotStore } from "../../store/store";
 import { usePlugin } from "../../hooks/usePlugin";
@@ -49,15 +55,20 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 		if (!textareaRef.current) return;
 
 		const cursorPosition = textareaRef.current.selectionStart;
-		const textBeforeCursor = textareaRef.current.value.substring(0, cursorPosition);
+		const textBeforeCursor = textareaRef.current.value.substring(
+			0,
+			cursorPosition,
+		);
 		const lineCount = (textBeforeCursor.match(/\n/g) || []).length;
 
 		const { offsetLeft, offsetTop } = textareaRef.current;
-		const lineHeight = parseInt(getComputedStyle(textareaRef.current).lineHeight);
-		
+		const lineHeight = parseInt(
+			getComputedStyle(textareaRef.current).lineHeight,
+		);
+
 		setDropdownPosition({
 			left: offsetLeft,
-			top: offsetTop + (lineCount * lineHeight),
+			top: offsetTop + lineCount * lineHeight,
 		});
 	}, []);
 
@@ -275,9 +286,14 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 				<div className={concat(BASE_CLASSNAME, "bottom-controls")}>
 					<div className={concat(BASE_CLASSNAME, "left-controls")}>
 						<select
-							className={concat(BASE_CLASSNAME, "profile-selector")}
+							className={concat(
+								BASE_CLASSNAME,
+								"profile-selector",
+							)}
 							value={activeProfileName}
-							onChange={(e) => handleProfileChange(e.target.value)}
+							onChange={(e) =>
+								handleProfileChange(e.target.value)
+							}
 							disabled={isLoading || !isAuthenticated}
 						>
 							{Object.keys(profiles).map((profileName) => (
@@ -289,10 +305,15 @@ const Input: React.FC<InputProps> = ({ isLoading = false }) => {
 						<ModelSelector isAuthenticated={isAuthenticated} />
 					</div>
 					<button
-						className={cx("mod-cta", concat(BASE_CLASSNAME, "button"))}
+						className={cx(
+							"mod-cta",
+							concat(BASE_CLASSNAME, "button"),
+						)}
 						onClick={handleSubmit}
 						disabled={
-							isLoading || message.trim() === "" || !isAuthenticated
+							isLoading ||
+							message.trim() === "" ||
+							!isAuthenticated
 						}
 					>
 						{isLoading ? "Thinking..." : "Send"}

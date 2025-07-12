@@ -134,6 +134,37 @@
 }
 
 /***********************
+ * Setting Tab 顶部标签页样式
+ ***********************/
+.copilot-setting-tabs {
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 24px;
+  padding-bottom: 4px;
+}
+.copilot-tab {
+  padding: 6px 18px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  border-radius: 6px 6px 0 0;
+  transition: background 0.2s, color 0.2s;
+}
+.copilot-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+.copilot-tab-active {
+  padding: 6px 18px;
+  font-weight: 600;
+  color: var(--text-accent);
+  background: var(--background-primary);
+  border-bottom: 2px solid var(--interactive-accent);
+  border-radius: 6px 6px 0 0;
+}
+
+/***********************
  * Specific Styles
  ***********************/
 
@@ -292,15 +323,15 @@
 }
 
 .copilot-chat-input-bottom-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    gap: 10px;
-    /* 底部控制栏：与textarea分隔 */
-    border-top: none;
-    background: var(--background-primary); /* 与 textarea 背景色统一 */
-    padding: 8px 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 100%;
+	gap: 10px;
+	/* 底部控制栏：与textarea分隔 */
+	border-top: none;
+	background: var(--background-primary); /* 与 textarea 背景色统一 */
+	padding: 8px 16px;
 }
 
 .copilot-chat-input-left-controls {
@@ -311,45 +342,45 @@
 
 .copilot-chat-input-profile-selector,
 .copilot-chat-model-selector-select {
-    width: auto;
-    background-color: var(--background-primary); /* 统一背景色 */
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    border: 1px solid var(--background-primary); /* 统一边框色 */
-    color: var(--text-normal);
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-    appearance: auto;
-    -webkit-appearance: listbox;
-    padding: 8px 12px;
-    height: 36px;
+	width: auto;
+	background-color: var(--background-primary); /* 统一背景色 */
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	border: 1px solid var(--background-primary); /* 统一边框色 */
+	color: var(--text-normal);
+	transition: border-color 0.2s ease, background-color 0.2s ease;
+	appearance: auto;
+	-webkit-appearance: listbox;
+	padding: 8px 12px;
+	height: 36px;
 }
 
 .copilot-chat-input-profile-selector {
-    border: 1px solid transparent;
+	border: 1px solid transparent;
 }
 
 .copilot-chat-input-profile-selector:focus,
 .copilot-chat-model-selector-select:focus {
-    outline: none;
-    background-color: var(--background-modifier-hover);
+	outline: none;
+	background-color: var(--background-modifier-hover);
 }
 
 .copilot-chat-input-profile-selector:hover:not(:disabled),
 .copilot-chat-model-selector-select:hover:not(:disabled) {
-    background-color: var(--background-modifier-hover);
+	background-color: var(--background-modifier-hover);
 }
 
 .copilot-chat-input-profile-selector:disabled,
 .copilot-chat-model-selector-select:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+	opacity: 0.6;
+	cursor: not-allowed;
 }
 
 .copilot-chat-input-profile-selector option,
 .copilot-chat-model-selector-select option {
-    background-color: var(--background-primary);
-    color: var(--text-normal);
+	background-color: var(--background-primary);
+	color: var(--text-normal);
 }
 
 .copilot-chat-input-input {
@@ -434,18 +465,18 @@
 }
 
 .copilot-chat-model-selector-select {
-    width: 100%;
-    background-color: var(--background-primary); /* 统一背景色 */
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    border: 1px solid var(--background-primary); /* 统一边框色 */
-    color: var(--text-normal);
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-    appearance: auto;
-    -webkit-appearance: listbox;
-    padding: 8px 12px;
-    height: 36px;
+	width: 100%;
+	background-color: var(--background-primary); /* 统一背景色 */
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	border: 1px solid var(--background-primary); /* 统一边框色 */
+	color: var(--text-normal);
+	transition: border-color 0.2s ease, background-color 0.2s ease;
+	appearance: auto;
+	-webkit-appearance: listbox;
+	padding: 8px 12px;
+	height: 36px;
 }
 
 .copilot-chat-model-selector-select:focus {

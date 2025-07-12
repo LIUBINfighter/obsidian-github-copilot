@@ -29,8 +29,9 @@ const Chat: React.FC = () => {
 	}, [plugin, initConversationService]);
 
 	const displayMessages = activeConversationId
-		? conversations.find((conv: Conversation) => conv.id === activeConversationId)
-				?.messages || []
+		? conversations.find(
+				(conv: Conversation) => conv.id === activeConversationId,
+			)?.messages || []
 		: messages;
 
 	const formattedMessages: MessageProps[] = displayMessages.map(
