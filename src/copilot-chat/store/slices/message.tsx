@@ -8,7 +8,8 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 const MAX_TOOL_CALL_ITERATIONS = 5;
 
 // 解析工具调用的正则表达式
-const TOOL_CALL_REGEX = /<tool_call>\s*name:\s*"([^"]+)"\s*arguments:\s*({[^}]*})\s*<\/tool_call>/gs;
+// 删除未使用的正则表达式
+// const TOOL_CALL_REGEX = /<tool_call>\s*name:\s*"([^"]+)"\s*arguments:\s*({[^}]*})\s*<\/tool_call>/gs;
 
 /**
  * 执行工具调用循环
@@ -23,7 +24,13 @@ async function performToolCallLoop(
 	set: any,
 ): Promise<void> {
 	let iterations = 0;
-	let currentMessages = buildMessageHistory(plugin, get, activeConversationId, notes, availableTools);
+	let currentMessages = buildMessageHistory(
+		plugin,
+		get,
+		activeConversationId,
+		notes,
+		availableTools,
+	);
 
 	while (iterations < MAX_TOOL_CALL_ITERATIONS) {
 		iterations++;
@@ -36,10 +43,17 @@ async function performToolCallLoop(
 			top_p: 1,
 			n: 1,
 			stream: false,
-			messages: currentMessages.map(msg => ({
-				content: msg.content,
-				role: msg.role,
-			})),
+			messages: currentMessages
+				.filter(
+					(msg) =>
+						msg.role === "user" ||
+						msg.role === "assistant" ||
+						msg.role === "system",
+				)
+				.map((msg) => ({
+					content: msg.content,
+					role: msg.role as "user" | "assistant" | "system",
+				})),
 		};
 
 		const response = await sendMessage(requestData, validToken);
@@ -49,9 +63,9 @@ async function performToolCallLoop(
 		}
 
 		const assistantContent = response.choices[0].message.content;
-		
-		// 解析是否包含工具调用
-		const toolCalls = parseToolCalls(assistantContent);
+
+		// 检查响应是否包含工具调用
+		const toolCalls = parseToolCalls(response.choices[0].message);
 
 		if (toolCalls.length === 0) {
 			// 没有工具调用，这是最终回复
@@ -81,7 +95,10 @@ async function performToolCallLoop(
 				toolCall: toolCall,
 			};
 
-			get().addMessageToConversation(activeConversationId, assistantMessage);
+			get().addMessageToConversation(
+				activeConversationId,
+				assistantMessage,
+			);
 			set((state: MessageSlice) => ({
 				messages: [...state.messages, assistantMessage],
 			}));
@@ -105,7 +122,10 @@ async function performToolCallLoop(
 				toolResult: toolResult,
 			};
 
-			get().addMessageToConversation(activeConversationId, toolResultMessage);
+			get().addMessageToConversation(
+				activeConversationId,
+				toolResultMessage,
+			);
 			set((state: MessageSlice) => ({
 				messages: [...state.messages, toolResultMessage],
 			}));
@@ -123,9 +143,9 @@ async function performToolCallLoop(
 }
 
 /**
- * 解析消息中的工具调用
+ * 解析消息中的工具调用 - 支持标准OpenAI格式
  */
-function parseToolCalls(content: string): Array<{
+function parseToolCalls(response: any): Array<{
 	id: string;
 	name: string;
 	arguments: Record<string, unknown>;
@@ -136,20 +156,25 @@ function parseToolCalls(content: string): Array<{
 		arguments: Record<string, unknown>;
 	}> = [];
 
-	let match;
-	while ((match = TOOL_CALL_REGEX.exec(content)) !== null) {
-		try {
-			const name = match[1];
-			const argumentsStr = match[2];
-			const arguments_ = JSON.parse(argumentsStr);
-			
-			toolCalls.push({
-				id: Date.now().toString() + "-" + Math.random(),
-				name,
-				arguments: arguments_,
-			});
-		} catch (error) {
-			console.error("Failed to parse tool call:", error);
+	// 检查响应是否包含tool_calls字段（标准OpenAI格式）
+	if (response.tool_calls && Array.isArray(response.tool_calls)) {
+		for (const toolCall of response.tool_calls) {
+			try {
+				const argumentsStr =
+					typeof toolCall.function.arguments === "string"
+						? toolCall.function.arguments
+						: JSON.stringify(toolCall.function.arguments);
+
+				toolCalls.push({
+					id:
+						toolCall.id ||
+						`call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+					name: toolCall.function.name,
+					arguments: JSON.parse(argumentsStr),
+				});
+			} catch (error) {
+				console.error("Failed to parse tool call arguments:", error);
+			}
 		}
 	}
 
@@ -181,37 +206,40 @@ function buildMessageHistory(
 		systemPrompt = activeProfile?.systemPrompt || "";
 	}
 
-	// 如果有可用工具，在系统提示中添加工具定义
+	// 移除旧的工具格式字符串，全部由下方标准格式替代
+	// 如果有可用工具，在系统提示中添加标准 Tool Calling 格式定义
 	if (availableTools.length > 0) {
-		const toolsDescription = availableTools
-			.map(tool => `- ${tool.name}: ${tool.description}`)
-			.join('\n');
-		
-		systemPrompt += `
+		// 生成工具 schema 列表
+		const toolSchemas = availableTools.map((tool) => ({
+			name: tool.name,
+			description: tool.description,
+			parameters: tool.inputSchema,
+		}));
 
-可用工具列表:
-${toolsDescription}
+		// 以更易读的 JSON 格式展示工具定义
+		const toolSchemasText = JSON.stringify(toolSchemas, null, 2);
 
-如果需要使用工具，请使用以下格式:
-<tool_call>
-name: "工具名称"
-arguments: {"参数名": "参数值"}
-</tool_call>`;
+		systemPrompt += `\n\n# Available Tools\n你可以使用如下工具。\n要调用工具，请在回复中使用标准 Tool Calling 格式，或直接回复工具调用 JSON。\n\n## 工具定义\n${toolSchemasText}`;
 	}
 
 	const messages: MessageData[] = systemPrompt
-		? [{ 
-			id: "system", 
-			content: systemPrompt, 
-			role: "system" as const, 
-			timestamp: Date.now() 
-		}, ...messageHistory]
+		? [
+				{
+					id: "system",
+					content: systemPrompt,
+					role: "system" as const,
+					timestamp: Date.now(),
+				},
+				...messageHistory,
+			]
 		: [...messageHistory];
 
 	// 处理链接的笔记
 	if (notes.length > 0 && messages.length > 0) {
-		const lastUserMessageIndex = messages.findLastIndex(msg => msg.role === "user");
-		
+		const lastUserMessageIndex = messages.findLastIndex(
+			(msg) => msg.role === "user",
+		);
+
 		if (lastUserMessageIndex !== -1) {
 			const lastUserMessage = messages[lastUserMessageIndex];
 			const linkedNotesText = notes
@@ -374,7 +402,6 @@ export const createMessageSlice: StateCreator<
 				get,
 				set,
 			);
-
 		} catch (error) {
 			console.error("Error sending message:", error);
 			set({
