@@ -343,6 +343,7 @@
 .copilot-chat-input-profile-selector,
 .copilot-chat-model-selector-select {
 	width: auto;
+	max-width: max-content;
 	background-color: var(--background-primary); /* 统一背景色 */
 	border-radius: 4px;
 	cursor: pointer;
