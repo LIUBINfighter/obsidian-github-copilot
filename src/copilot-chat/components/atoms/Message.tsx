@@ -5,19 +5,16 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { usePlugin } from "../../hooks/usePlugin";
+import { MessageData } from "../../store/slices/Message";
 
 const BASE_CLASSNAME = "copilot-chat-message";
 
-export interface MessageProps {
+export interface MessageProps extends MessageData {
 	className?: string;
 	icon: string;
 	name: string;
-	message: string;
-	linkedNotes?: {
-		path: string;
-		filename: string;
-		content: string;
-	}[];
+	// Add message for backwards compatibility with parent components that might still pass it.
+	message?: string;
 }
 
 interface CodeProps {
@@ -27,8 +24,40 @@ interface CodeProps {
 	children?: React.ReactNode;
 }
 
+/**
+ * Safely parses and pretty-prints a JSON string.
+ * If the string is not valid JSON, it returns the original string.
+ * @param jsonString The string to parse.
+ * @returns A formatted JSON string or the original string.
+ */
+const prettyPrintJson = (jsonString: string | null): string => {
+	if (jsonString === null || jsonString === undefined) {
+		return "{}";
+	}
+	try {
+		const parsed = JSON.parse(jsonString);
+		return JSON.stringify(parsed, null, 2);
+	} catch (e) {
+		return jsonString; // Return original string if parsing fails
+	}
+};
+
 const ChatMessage: React.FC<MessageProps> = (props) => {
-	const { className, icon, name, message, linkedNotes } = props;
+	const {
+		className,
+		icon,
+		name,
+		content: contentFromData, // Renamed to avoid conflict
+		linkedNotes,
+		role,
+		tool_calls,
+		tool_call_id,
+		message, // The old prop
+	} = props;
+
+	// Use the new `content` prop, but fall back to the old `message` prop for compatibility.
+	const content = contentFromData ?? message;
+
 	const plugin = usePlugin();
 	const [isCopied, setIsCopied] = React.useState(false);
 
@@ -38,7 +67,7 @@ const ChatMessage: React.FC<MessageProps> = (props) => {
 
 	const handleCopyMessage = () => {
 		navigator.clipboard
-			.writeText(message)
+			.writeText(content || "")
 			.then(() => {
 				setIsCopied(true);
 				setTimeout(() => {
@@ -106,55 +135,102 @@ const ChatMessage: React.FC<MessageProps> = (props) => {
 				</button>
 			</div>
 			<div className={concat(BASE_CLASSNAME, "message")}>
-				<ReactMarkdown
-					components={{
-						p({ children }) {
-							return (
-								<p style={{ whiteSpace: "pre-wrap" }}>
-									{children}
-								</p>
-							);
-						},
-						code({
-							className,
-							inline,
-							children,
-							...props
-						}: CodeProps) {
-							const match = /language-(\w+)/.exec(
-								className || "",
-							);
-							return !inline && match ? (
-								<SyntaxHighlighter
-									language={match[1]}
-									style={
-										isDarkTheme
-											? vscDarkPlus
-											: (oneLight as Record<
-													string,
-													React.CSSProperties
-												>)
-									}
-									PreTag="div"
-									className={`theme-${isDarkTheme ? "dark" : "light"}`}
-									customStyle={{
-										background: "var(--code-background)",
-										borderRadius: "4px",
-									}}
-									{...props}
-								>
-									{String(children || "").replace(/\n$/, "")}
-								</SyntaxHighlighter>
-							) : (
-								<code className={className} {...props}>
-									{children}
-								</code>
-							);
-						},
-					}}
-				>
-					{message}
-				</ReactMarkdown>
+				{content !== null && content !== undefined && (
+					<ReactMarkdown
+						components={{
+							p({ children }) {
+								return (
+									<p style={{ whiteSpace: "pre-wrap" }}>
+										{children}
+									</p>
+								);
+							},
+							code({
+								className,
+								inline,
+								children,
+								...props
+							}: CodeProps) {
+								const match = /language-(\w+)/.exec(
+									className || "",
+								);
+								return !inline && match ? (
+									<SyntaxHighlighter
+										language={match[1]}
+										style={
+											isDarkTheme
+												? vscDarkPlus
+												: (oneLight as Record<
+														string,
+														React.CSSProperties
+													>)
+										}
+										PreTag="div"
+										className={`theme-${
+											isDarkTheme ? "dark" : "light"
+										}`}
+										customStyle={{
+											background: "var(--code-background)",
+											borderRadius: "4px",
+										}}
+										{...props}
+									>
+										{String(children || "").replace(/\n$/, "")}
+									</SyntaxHighlighter>
+								) : (
+									<code className={className} {...props}>
+										{children}
+									</code>
+								);
+							},
+						}}
+					>
+						{content}
+					</ReactMarkdown>
+				)}
+
+				{role === "assistant" && tool_calls && tool_calls.length > 0 && (
+					<div className="copilot-chat-tool-call">
+						<p>🧠 Thinking... Using tool(s):</p>
+						<ul>
+							{tool_calls.map((call) => (
+								<li key={call.id}>
+									<code>{call.name}</code> with arguments:{" "}
+									<code>{JSON.stringify(call.arguments)}</code>
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+
+				{role === "tool" && (
+					<div className="copilot-chat-tool-result">
+						<p>
+							⚙️ Tool Result (<code>{tool_call_id}</code>):
+						</p>
+						<SyntaxHighlighter
+							language="json"
+							style={isDarkTheme ? vscDarkPlus : oneLight}
+						>
+							{content ? prettyPrintJson(content) : ""}
+						</SyntaxHighlighter>
+
+						{/* Allow copying tool output for further usage */}
+						{content && (
+							<button
+								title="Copy Result"
+								onClick={() =>
+									navigator.clipboard.writeText(
+										prettyPrintJson(content),
+									)
+								}
+								className="copy-button-tool-result"
+							>
+								<span>📋</span>
+							</button>
+						)}
+					</div>
+				)}
 
 				{linkedNotes && linkedNotes.length > 0 && (
 					<div className={concat(BASE_CLASSNAME, "linked-notes")}>
